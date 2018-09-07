@@ -25,12 +25,11 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
+	"github.com/hawq-cn/k8s-prometheus-es-remote-storage/elasticsearch"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 	"github.com/prometheus/common/model"
-
-	"github.com/hawq-cn/k8s-prometheus-es-remote-storage/elasticsearch"
-	"github.com/prometheus/prometheus/storage/remote"
+	"github.com/prometheus/prometheus/prompb"
 )
 
 type config struct {
@@ -121,7 +120,7 @@ type writer interface {
 }
 
 type reader interface {
-	Read(req *remote.ReadRequest) (*remote.ReadResponse, error)
+	Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error)
 	Name() string
 }
 
@@ -155,7 +154,7 @@ func serve(addr string, writers []writer, readers []reader) error {
 			return
 		}
 
-		var req remote.WriteRequest
+		var req prompb.WriteRequest
 		if err := proto.Unmarshal(reqBuf, &req); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -188,7 +187,7 @@ func serve(addr string, writers []writer, readers []reader) error {
 			return
 		}
 
-		var req remote.ReadRequest
+		var req prompb.ReadRequest
 		if err := proto.Unmarshal(reqBuf, &req); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -201,7 +200,7 @@ func serve(addr string, writers []writer, readers []reader) error {
 		}
 		reader := readers[0]
 
-		var resp *remote.ReadResponse
+		var resp *prompb.ReadResponse
 		resp, err = reader.Read(&req)
 		if err != nil {
 			log.With("query", req).With("storage", reader.Name()).With("err", err).Warnf("Error executing query")
@@ -228,7 +227,7 @@ func serve(addr string, writers []writer, readers []reader) error {
 	return http.ListenAndServe(addr, nil)
 }
 
-func protoToSamples(req *remote.WriteRequest) model.Samples {
+func protoToSamples(req *prompb.WriteRequest) model.Samples {
 	var samples model.Samples
 	for _, ts := range req.Timeseries {
 		metric := make(model.Metric, len(ts.Labels))
@@ -240,7 +239,7 @@ func protoToSamples(req *remote.WriteRequest) model.Samples {
 			samples = append(samples, &model.Sample{
 				Metric:    metric,
 				Value:     model.SampleValue(s.Value),
-				Timestamp: model.Time(s.TimestampMs),
+				Timestamp: model.Time(s.Timestamp),
 			})
 		}
 	}
