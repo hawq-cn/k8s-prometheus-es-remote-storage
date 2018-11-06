@@ -94,7 +94,7 @@ func parseFlags() *config {
 	flag.StringVar(&cfg.elasticsearchURL, "elasticsearch-url", "",
 		"The URL of the remote Elasticsearch to send samples to. None, if empty",
 	)
-	flag.IntVar(&cfg.elasticsearchMaxRetries, "elasticsearch.max-retries", 1,
+	flag.IntVar(&cfg.elasticsearchMaxRetries, "elasticsearch.max-retries", 10,
 		"The max retries number while sending samples to elasticsearch. Default is 1",
 	)
 	flag.StringVar(&cfg.elasticIndexPerfix, "elasticsearch.index-perfix", "prometheus",
@@ -129,6 +129,7 @@ func buildClients(cfg *config) ([]writer, []reader) {
 	var readers []reader
 	if cfg.elasticsearchURL != "" {
 		url, err := url.Parse(cfg.elasticsearchURL)
+		log.Info("ES url is ", cfg.elasticsearchURL)
 		if err != nil {
 			log.Fatalf("Failed to parse Elasticsearch URL %q: %v", cfg.elasticsearchURL, err)
 		}
